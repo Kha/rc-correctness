@@ -8,8 +8,8 @@ open rc_correctness.ob_lin_type
 
 inductive fn_body_wf (β : const → var → ob_lin_type) (δ : const → fn) : finset var → finset var → fn_body → Prop
 notation Γ `; ` Δ ` ⊢ `:1 F := fn_body_wf Γ Δ F
-| ret {Γ Δ : finset var} {x : var} 
-  (x_def : x ∈ Γ) :
+| ret {Γ Δ : finset var} {x : var}
+  (x_def : x ∈ Γ) (Δ_def : Δ = ∅) :
   Γ; Δ ⊢ ret x
 | let_const_app_full {Γ Δ : finset var} {z : var} {c : const} {ys : list var} {F : fn_body}
   (ys_def : ys.to_finset ⊆ Γ) (arity_eq : ys.length = (δ c).ys.length)
@@ -34,12 +34,12 @@ notation Γ `; ` Δ ` ⊢ `:1 F := fn_body_wf Γ Δ F
   Γ; Δ ⊢ (z ≔ x[i]; F)
 | let_reset {Γ Δ : finset var} {z : var} {x : var} {F : fn_body}
   (x_def : x ∈ Γ)
-  (z_used : z ∈ FV F) (F_wf : Γ; insert z Δ ⊢ F) :
+  (z_used : z ∈ FV F) (z_undef : z ∉ Δ) (F_wf : Γ; insert z Δ ⊢ F) :
   Γ; Δ ⊢ (z ≔ reset x; F)
-| let_reuse {Γ Δ Δ' : finset var} {z : var} {x : var} (i : cnstr) {ys : list var} {F : fn_body}
-  (ys_def : ys.to_finset ⊆ Γ) (Δ'_def : Δ' = insert x Δ)
-  (z_used : z ∈ FV F) (z_undef : z ∉ Γ) (F_wf : insert z Γ; Δ ⊢ F) :
-  Γ; Δ' ⊢ (z ≔ reuse x in ⟪ys⟫i; F)
+| let_reuse {Γ Δ : finset var} {z : var} {x : var} (i : cnstr) {ys : list var} {F : fn_body}
+  (ys_def : ys.to_finset ⊆ Γ)
+  (z_used : z ∈ FV F) (z_undef : z ∉ Γ) (F_wf : insert z Γ; Δ.erase x ⊢ F) :
+  Γ; Δ ⊢ (z ≔ reuse x in ⟪ys⟫i; F)
 | «case» {Γ Δ : finset var} {x : var} {Fs : list fn_body}
   (x_def : x ∈ Γ) (Fs_wf : ∀ F ∈ Fs, Γ; Δ ⊢ F) :
   Γ; Δ ⊢ (case x of Fs)
@@ -48,6 +48,9 @@ notation Γ `; ` Δ ` ⊢ `:1 F := fn_body_wf Γ Δ F
   Γ; Δ ⊢ inc x; F
 | «dec» {Γ Δ : finset var} {x : var} {F : fn_body}
   (x_def : x ∈ Γ) (F_wf : Γ; Δ ⊢ F) :
+  Γ; Δ ⊢ dec x; F
+| dec_reset {Γ Δ Δ' : finset var} {x : var} {F : fn_body}
+  (F_wf : Γ; Δ.erase x ⊢ F) :
   Γ; Δ ⊢ dec x; F
 
 notation β `; ` δ `; ` Γ `; ` Δ ` ⊢ `:1 F := fn_body_wf β δ Γ Δ F
